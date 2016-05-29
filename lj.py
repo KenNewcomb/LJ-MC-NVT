@@ -4,22 +4,23 @@ import sys
 import math
 import copy
 import os
+
 # Simulation Parameters
 N       = 500
 sigma   = 1
 epsilon = 1
 trunc   = 3*sigma
 truncsq = trunc**2
-equil   = int(sys.argv[1])
+steps   = 100000
 temp    = 8.5e-1
 density = 1.0e-3
 L =  (N/density)**(1.0/3.0)
 halfL = L/2
-
 particles = []
 
 # Some helper functions
 def wrap(particle):
+	'''Apply perodic boundary conditions.'''
 	if particle[0] > L:
 		particle[0] -= L
 	elif particle[0] < 0:
@@ -68,6 +69,7 @@ def energy(particles):
 	return energy
 
 def particleEnergy(particle, particles, p):
+	'''Gets the energy of a single particle.'''
 	part_energy = 0
 	i = 0
 	for particle2 in particles:
@@ -79,14 +81,15 @@ def particleEnergy(particle, particles, p):
 	return part_energy
 
 def writeEnergy(step, en):
+	'''Writes the energy to a file.'''
 	with open('energy', 'a') as f:
 		f.write('{0} {1}\n'.format(step, en))
 
-# Clear files if they exist.
+# Clear files if they already exist.
 if os.path.exists('energy'):
 	os.remove('energy')
 
-# Pack the box:
+# Initialize the simulation box:
 for particle in range(0, N):
 	x_coord = random.uniform(0, L)
 	y_coord = random.uniform(0, L)
@@ -94,15 +97,11 @@ for particle in range(0, N):
 	particles.append([x_coord, y_coord, z_coord])
 
 # Calculate initial energy
-en = 0
 en = energy(particles)
 
-
-print('Initial energy: {0}'.format(en))
-
 # MC
-for step in range(0, equil):
-	sys.stdout.write("\rStep: {0} Average Energy: {1}".format(step, en))
+for step in range(0, steps):
+	sys.stdout.write("\rStep: {0} Energy: {1}".format(step, en))
 	sys.stdout.flush()
 	
 	# Choose a particle to move at random.
@@ -118,7 +117,7 @@ for step in range(0, equil):
 	new_E = particleEnergy(this_particle, particles, p)
 	deltaE = new_E - prev_E
 
-	# Check energy
+	# Acceptance rule enforcing Boltzmann statistics
 	if deltaE < 0:
 		particles[p] = this_particle
 		en += deltaE
@@ -127,5 +126,4 @@ for step in range(0, equil):
 		if math.exp(-deltaE/temp) > rand:
 			particles[p] = this_particle
 			en += deltaE
-	if step > 10000:
-		writeEnergy(str(step), str(en))
+	writeEnergy(str(step), str(en))
